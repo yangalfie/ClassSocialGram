@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Class Network Dynamics</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #0f172a; font-family: 'Inter', sans-serif; touch-action: none; }
+        canvas { display: block; width: 100vw; height: 100vh; cursor: grab; }
+        canvas:active { cursor: grabbing; }
+        .ui-panel {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+            max-height: 90vh;
+        }
+        /* Custom scrollbar for panel */
+        #panelContent::-webkit-scrollbar { width: 6px; }
+        #panelContent::-webkit-scrollbar-track { background: transparent; }
+        #panelContent::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        #studentList::-webkit-scrollbar { width: 4px; }
+        #studentList::-webkit-scrollbar-track { background: transparent; }
+        #studentList::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    </style>
+</head>
+<body class="text-slate-200">
+
+    <!-- Responsive UI Panel -->
+    <div class="fixed top-4 left-4 right-4 sm:right-auto sm:w-[22rem] bg-slate-800/95 backdrop-blur rounded-xl border border-slate-700 ui-panel z-10 flex flex-col transition-all duration-300">
+        
+        <!-- Header -->
+        <div id="panelHeader" class="flex justify-between items-center p-4 cursor-pointer select-none rounded-t-xl hover:bg-slate-700/30 transition-colors">
+            <div>
+                <h1 class="text-lg font-bold text-white mb-0.5 leading-none">Class Dynamics</h1>
+                <p class="text-[11px] text-slate-400 leading-none mt-1">Survey Data Sociogram</p>
+            </div>
+            <button id="toggleBtn" class="text-slate-400 hover:text-white bg-slate-700/50 p-1.5 rounded-lg transition-colors">
+                <svg id="chevronIcon" class="w-5 h-5 transform transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Collapsible Content -->
+        <div id="panelContent" class="px-4 pb-4 flex flex-col gap-4 overflow-y-auto">
+            
+            <!-- Focus Student Multi-Select -->
+            <div class="border-t border-slate-700/50 pt-3">
+                <div class="flex justify-between items-center mb-2">
+                    <label class="block text-sm font-semibold text-slate-300">Focus Student(s)</label>
+                    <div class="flex gap-2">
+                        <button id="selectAllBtn" class="text-[10px] text-sky-400 hover:text-sky-300 transition-colors">Select All</button>
+                        <button id="clearAllBtn" class="text-[10px] text-sky-400 hover:text-sky-300 transition-colors">Clear</button>
+                    </div>
+                </div>
+                <div id="studentList" class="max-h-40 overflow-y-auto bg-slate-900/50 rounded-lg p-2 flex flex-col gap-1.5 border border-slate-700 shadow-inner">
+                    <!-- Checkboxes injected here via JS -->
+                </div>
+            </div>
+
+            <div class="border-t border-slate-700/50 pt-3">
+                <h2 class="text-sm font-semibold mb-2 text-slate-300">Relationship Filters</h2>
+                <div id="filters" class="flex flex-col gap-2 text-sm">
+                    <!-- Checkboxes will be injected here via JS -->
+                </div>
+            </div>
+
+            <div class="border-t border-slate-700/50 pt-3">
+                <label for="csvUpload" class="block w-full text-center font-medium cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white text-sm py-2 px-3 rounded-lg transition-colors shadow-sm">
+                    📁 Upload Survey CSV
+                </label>
+                <input type="file" id="csvUpload" accept=".csv" class="hidden" />
+                <div class="flex flex-col items-center mt-2 gap-1 text-center">
+                    <p class="text-[10px] text-slate-400 px-2 leading-tight">Must include "Identify Yourself" and "Relationship Mapping [...]" columns.</p>
+                    <button id="downloadTemplateBtn" class="text-[11px] text-sky-400 hover:text-sky-300 underline underline-offset-2 transition-colors cursor-pointer mt-1">
+                        Download Survey Template CSV
+                    </button>
+                </div>
+            </div>
+
+            <div class="text-[11px] text-slate-400 border-t border-slate-700/50 pt-3 leading-relaxed">
+                <p><strong>Pinch/Scroll</strong> to zoom. <strong>Drag</strong> background to pan. <strong>Drag</strong> nodes to move them.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Recenter Button -->
+    <button id="recenterBtn" class="fixed bottom-6 right-6 bg-slate-800/90 backdrop-blur border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700 p-3 rounded-full shadow-xl z-10 transition-all flex items-center justify-center cursor-pointer group" title="Recenter Network">
+        <svg class="w-6 h-6 group-active:scale-90 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h4v2H6v2H4V4zm16 0h-4v2h2v2h2V4zM4 20h4v-2H6v-2H4v4zm16 0h-4v-2h2v-2h2v4zm-10-6a2 2 0 100-4 2 2 0 000 4z"/>
+        </svg>
+    </button>
+
+    <canvas id="network"></canvas>
+
+    <script>
+        // UI Panel Toggle Logic
+        const panelHeader = document.getElementById('panelHeader');
+        const panelContent = document.getElementById('panelContent');
+        const chevronIcon = document.getElementById('chevronIcon');
+        let isPanelOpen = true;
+
+        if (window.innerWidth < 640) {
+            isPanelOpen = false;
+            panelContent.style.display = 'none';
+            chevronIcon.style.transform = 'rotate(180deg)';
+        }
+
+        panelHeader.addEventListener('click', () => {
+            isPanelOpen = !isPanelOpen;
+            if (isPanelOpen) {
+                panelContent.style.display = 'flex';
+                chevronIcon.style.transform = 'rotate(0deg)';
+            } else {
+                panelContent.style.display = 'none';
+                chevronIcon.style.transform = 'rotate(180deg)';
+            }
+        });
+
+        // Canvas & D3 Logic
+        const canvas = document.getElementById('network');
+        const ctx = canvas.getContext('2d', { alpha: false }); 
+        
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        let transform = d3.zoomIdentity;
+        let hoveredNode = null;
+        let simulation = null; 
+
+        const relTypes = {
+            "Close Friend": { color: "#10b981", width: 3, dash: [] }, 
+            "Friend": { color: "#3b82f6", width: 2, dash: [] }, 
+            "Acquaintance": { color: "#64748b", width: 1, dash: [4, 4] }, 
+            "Used to be friends": { color: "#f59e0b", width: 1.5, dash: [2, 2] }, 
+            "Avoid / Do not interact": { color: "#ef4444", width: 1.5, dash: [8, 4] } 
+        };
+
+        const activeFilters = new Set(Object.keys(relTypes));
+        let nodes = [];
+        let links = [];
+        
+        // Master Data keeps pure state unmutated by D3
+        let masterData = { nodes: [], links: [] };
+        let savedPositions = new Map();
+        let activeStudents = new Set();
+        let allStudents = [];
+
+        // Helper: Parses CSV text handling internal commas inside quote marks
+        function parseCSVLine(text) {
+            let ret = [];
+            let inQuote = false;
+            let value = "";
+            for (let i = 0; i < text.length; i++) {
+                let char = text[i];
+                if (char === '"') {
+                    inQuote = !inQuote;
+                } else if (char === ',' && !inQuote) {
+                    ret.push(value);
+                    value = "";
+                } else {
+                    value += char;
+                }
+            }
+            ret.push(value);
+            return ret;
+        }
+
+        // Processes the Wide-Matrix Survey Format into D3 Data
+        function processSurveyData(csvText) {
+            const rows = csvText.trim().split('\n').map(parseCSVLine);
+            if (rows.length < 2) return null;
+
+            const headers = rows[0].map(h => h.replace(/^"|"$/g, '').trim());
+            const sourceIdx = headers.findIndex(h => h.toLowerCase().includes('identify yourself'));
+
+            if (sourceIdx === -1) {
+                alert("Invalid Format: Could not find 'Identify Yourself' column.");
+                return null;
+            }
+
+            const targetCols = [];
+            for (let i = 0; i < headers.length; i++) {
+                if (headers[i].toLowerCase().includes('relationship mapping')) {
+                    let name = headers[i];
+                    const match = headers[i].match(/\[(.*?)\]/);
+                    if (match) name = match[1];
+                    targetCols.push({ index: i, name: name });
+                }
+            }
+
+            const newNodesMap = new Map();
+            const newLinks = [];
+
+            targetCols.forEach(tc => {
+                if (!newNodesMap.has(tc.name)) newNodesMap.set(tc.name, { id: tc.name });
+            });
+
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                let source = row[sourceIdx];
+                if (!source) continue;
+                source = source.replace(/^"|"$/g, '').trim();
+
+                if (!newNodesMap.has(source)) newNodesMap.set(source, { id: source });
+
+                targetCols.forEach(tc => {
+                    let rel = row[tc.index];
+                    if (!rel) return;
+                    rel = rel.replace(/^"|"$/g, '').trim();
+                    if (rel === '') return;
+
+                    if (source === tc.name) return; // Prevent self-connections
+
+                    let matchedType = "Acquaintance"; 
+                    const relLower = rel.toLowerCase();
+                    
+                    // Sort relationship types by length (longest first) so "Used to be friends" is checked BEFORE "Friend"
+                    const sortedTypes = Object.keys(relTypes).sort((a, b) => b.length - a.length);
+                    
+                    for(let knownType of sortedTypes) {
+                        if(relLower === knownType.toLowerCase() || relLower.includes(knownType.toLowerCase())) {
+                            matchedType = knownType;
+                            break;
+                        }
+                    }
+
+                    newLinks.push({
+                        source: source,
+                        target: tc.name,
+                        type: matchedType
+                    });
+                });
+            }
+
+            return {
+                nodes: Array.from(newNodesMap.values()),
+                links: newLinks
+            };
+        }
+
+        function createMockDataset() {
+            const names = ["AALIYAH ZARA", "ALYA ADRIANNA", "ANAIS YASMIN", "ARIELLE JUNERITA", "ASTRID TANG", "CHANG JIA YING", "CHEN QINYI", "CHONG YU EN", "CLANCY YONG", "CLARA NEO"];
+            let header = 'Timestamp,Identify Yourself,' + names.map(n => `"Relationship Mapping [${n}]"`).join(',') + '\n';
+            let rows = [];
+            
+            for(let i=0; i < names.length; i++) {
+                let row = [`2026-05-11 12:00:00`, `"${names[i]}"`];
+                for(let j=0; j < names.length; j++) {
+                    if(i === j) {
+                        row.push('');
+                    } else {
+                        let rand = Math.random();
+                        let rel = "";
+                        if (rand < 0.15) rel = "Close Friend";
+                        else if (rand < 0.35) rel = "Friend";
+                        else if (rand < 0.65) rel = "Acquaintance";
+                        else if (rand < 0.75) rel = "Used to be friends";
+                        else if (rand < 0.85) rel = "Avoid / Do not interact";
+                        row.push(`"${rel}"`);
+                    }
+                }
+                rows.push(row.join(','));
+            }
+            return header + rows.join('\n');
+        }
+
+        function populateStudentList(nodesList) {
+            const container = document.getElementById('studentList');
+            container.innerHTML = '';
+            allStudents = nodesList.map(n => n.id).sort();
+            activeStudents = new Set(allStudents); // default all
+            
+            allStudents.forEach(id => {
+                const label = document.createElement('label');
+                label.className = "flex items-center gap-2 cursor-pointer group hover:bg-slate-700/50 p-1 rounded transition-colors text-[12px] truncate";
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.value = id;
+                checkbox.checked = true;
+                checkbox.className = "w-3.5 h-3.5 accent-indigo-500 cursor-pointer shrink-0";
+                
+                checkbox.onchange = (e) => {
+                    if(e.target.checked) activeStudents.add(id);
+                    else activeStudents.delete(id);
+                    applyFilters(false);
+                };
+
+                const text = document.createElement('span');
+                text.textContent = id;
+                text.className = "text-slate-300 group-hover:text-white transition-colors truncate";
+
+                label.appendChild(checkbox);
+                label.appendChild(text);
+                container.appendChild(label);
+            });
+        }
+
+        document.getElementById('selectAllBtn').addEventListener('click', () => {
+            activeStudents = new Set(allStudents);
+            document.querySelectorAll('#studentList input[type="checkbox"]').forEach(cb => cb.checked = true);
+            applyFilters(false);
+        });
+
+        document.getElementById('clearAllBtn').addEventListener('click', () => {
+            activeStudents.clear();
+            document.querySelectorAll('#studentList input[type="checkbox"]').forEach(cb => cb.checked = false);
+            applyFilters(false);
+        });
+
+        function renderFilters() {
+            const filterContainer = document.getElementById('filters');
+            filterContainer.innerHTML = '';
+            
+            Object.entries(relTypes).forEach(([type, style]) => {
+                const label = document.createElement('label');
+                label.className = "flex items-center gap-3 cursor-pointer group active:bg-slate-700/50 hover:bg-slate-700/50 p-1.5 rounded transition-colors";
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = activeFilters.has(type);
+                checkbox.className = "w-4 h-4 accent-slate-500 cursor-pointer";
+                checkbox.onchange = (e) => {
+                    if(e.target.checked) activeFilters.add(type);
+                    else activeFilters.delete(type);
+                    applyFilters(false); 
+                };
+
+                const colorDot = document.createElement('span');
+                colorDot.className = "w-3.5 h-3.5 rounded-full inline-block shadow-sm shrink-0";
+                colorDot.style.backgroundColor = style.color;
+
+                const text = document.createElement('span');
+                text.textContent = type;
+                text.className = "text-slate-300 group-hover:text-white transition-colors text-[13px]";
+
+                label.appendChild(checkbox);
+                label.appendChild(colorDot);
+                label.appendChild(text);
+                filterContainer.appendChild(label);
+            });
+        }
+
+        // New Logic: Filters pure master data down before handing it to D3 physics
+        function applyFilters(isInitialLoad = false) {
+            // Save physics layout positions to prevent scrambled UX when filtering
+            if (nodes && nodes.length > 0) {
+                nodes.forEach(n => {
+                    savedPositions.set(n.id, {
+                        x: n.x, y: n.y, vx: n.vx, vy: n.vy, fx: n.fx, fy: n.fy
+                    });
+                });
+            }
+
+            // Filter Links based on checkboxes
+            let fLinks = masterData.links.filter(l => activeFilters.has(l.type));
+
+            // Filter Links based on multiple active students
+            if (activeStudents.size < allStudents.length) {
+                fLinks = fLinks.filter(l => activeStudents.has(l.source) || activeStudents.has(l.target));
+            }
+
+            // Determine active Nodes
+            let fNodes = [];
+            if (activeStudents.size === allStudents.length) {
+                fNodes = masterData.nodes.map(n => ({id: n.id}));
+            } else {
+                const activeIds = new Set(activeStudents); // Ensure selected are always present
+                fLinks.forEach(l => {
+                    activeIds.add(l.source);
+                    activeIds.add(l.target);
+                });
+                fNodes = Array.from(activeIds).map(id => ({id}));
+            }
+
+            // Restore D3 Positions so graph doesn't unnecessarily scramble
+            fNodes.forEach(n => {
+                if (savedPositions.has(n.id)) {
+                    Object.assign(n, savedPositions.get(n.id));
+                }
+            });
+
+            const simLinks = fLinks.map(l => ({
+                source: l.source,
+                target: l.target,
+                type: l.type
+            }));
+
+            initSimulation({ nodes: fNodes, links: simLinks });
+
+            if (isInitialLoad) {
+                resetView(false);
+            }
+        }
+
+        // Handles loading completely new files seamlessly
+        function loadData(graphData) {
+            masterData = graphData;
+            savedPositions.clear(); 
+            populateStudentList(graphData.nodes);
+            applyFilters(true); 
+        }
+
+        function resetView(animate = true) {
+            const isMobile = window.innerWidth < 640;
+            const scale = isMobile ? 0.45 : 0.75; 
+            
+            const t = d3.zoomIdentity
+                .translate(width / 2, height / 2)
+                .scale(scale)
+                .translate(-width / 2, -height / 2);
+
+            if (animate) {
+                d3.select(canvas).transition().duration(750).call(zoom.transform, t);
+            } else {
+                d3.select(canvas).call(zoom.transform, t);
+            }
+        }
+
+        document.getElementById('recenterBtn').addEventListener('click', () => resetView(true));
+
+        function initSimulation(graphData) {
+            nodes = graphData.nodes;
+            links = graphData.links;
+
+            if (simulation) simulation.stop();
+
+            const isMobile = window.innerWidth < 640;
+
+            simulation = d3.forceSimulation(nodes)
+                .force("link", d3.forceLink(links).id(d => d.id).distance(isMobile ? 100 : 150))
+                .force("charge", d3.forceManyBody().strength(isMobile ? -300 : -500))
+                .force("center", d3.forceCenter(width / 2, height / 2))
+                .force("collide", d3.forceCollide().radius(isMobile ? 30 : 40).iterations(2))
+                .alphaTarget(0.05); 
+            
+            simulation.on("tick", () => {
+                nodes.forEach(d => {
+                    if (d.fx == null && d.fy == null) {
+                        d.vx += (Math.random() - 0.5) * 0.15;
+                        d.vy += (Math.random() - 0.5) * 0.15;
+                    }
+                });
+                draw();
+            }); 
+        }
+
+        function draw() {
+            if (!simulation) return; 
+
+            ctx.save();
+            ctx.clearRect(0, 0, width, height);
+            ctx.fillStyle = '#0f172a'; 
+            ctx.fillRect(0, 0, width, height);
+            
+            ctx.translate(transform.x, transform.y);
+            ctx.scale(transform.k, transform.k);
+
+            const filteredLinks = simulation.force("link").links();
+
+            filteredLinks.forEach(link => {
+                const style = relTypes[link.type] || relTypes["Acquaintance"]; 
+                ctx.beginPath();
+                ctx.moveTo(link.source.x, link.source.y);
+                ctx.lineTo(link.target.x, link.target.y);
+                
+                ctx.strokeStyle = style.color;
+                ctx.lineWidth = style.width / transform.k; 
+                ctx.setLineDash(style.dash);
+                
+                if (hoveredNode && link.source.id !== hoveredNode.id && link.target.id !== hoveredNode.id) {
+                    ctx.globalAlpha = 0.05;
+                } else {
+                    ctx.globalAlpha = 0.6;
+                }
+                
+                ctx.stroke();
+            });
+
+            ctx.setLineDash([]); 
+            ctx.globalAlpha = 1.0;
+
+            nodes.forEach(node => {
+                const isHovered = hoveredNode && hoveredNode.id === node.id;
+                const isConnected = hoveredNode && filteredLinks.some(l => 
+                    (l.source.id === hoveredNode.id && l.target.id === node.id) ||
+                    (l.target.id === hoveredNode.id && l.source.id === node.id)
+                );
+                
+                if (hoveredNode && !isHovered && !isConnected) {
+                    ctx.globalAlpha = 0.2;
+                } else {
+                    ctx.globalAlpha = 1.0;
+                }
+
+                ctx.beginPath();
+                ctx.moveTo(node.x + 8, node.y);
+                ctx.arc(node.x, node.y, isHovered ? 14 : 9, 0, 2 * Math.PI);
+                ctx.fillStyle = isHovered ? '#fff' : '#cbd5e1';
+                ctx.fill();
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.fillStyle = isHovered ? '#fff' : '#94a3b8';
+                ctx.font = isHovered ? 'bold 15px Inter, sans-serif' : '13px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                
+                let displayName = node.id;
+                if (!isHovered && displayName.split(' ').length > 2) {
+                    displayName = displayName.split(' ').slice(0, 2).join(' ');
+                }
+
+                const scaleFactor = Math.max(0.5, 1/transform.k);
+                ctx.save();
+                ctx.translate(node.x, node.y + (isHovered ? 18 : 14));
+                ctx.scale(scaleFactor, scaleFactor);
+                ctx.fillText(displayName, 0, 0);
+                ctx.restore();
+            });
+
+            ctx.restore();
+        }
+
+        const zoom = d3.zoom()
+            .scaleExtent([0.05, 4])
+            .on("zoom", (e) => {
+                transform = e.transform;
+                draw();
+            });
+
+        d3.select(canvas)
+            .call(zoom)
+            .call(d3.drag()
+                .subject(getSubject)
+                .on("start", dragStarted)
+                .on("drag", dragged)
+                .on("end", dragEnded)
+            )
+            .on("mousemove", handleMouseMove)
+            .on("touchmove", handleMouseMove);
+
+        function getSubject(e) {
+            let ex, ey;
+            if (e.sourceEvent?.touches?.length > 0) {
+                ex = e.sourceEvent.touches[0].clientX;
+                ey = e.sourceEvent.touches[0].clientY;
+            } else if (e.touches?.length > 0) {
+                ex = e.touches[0].clientX;
+                ey = e.touches[0].clientY;
+            } else {
+                ex = e.clientX ?? e.x;
+                ey = e.clientY ?? e.y;
+            }
+
+            if (ex === undefined || ey === undefined) return null;
+
+            const x = transform.invertX(ex);
+            const y = transform.invertY(ey);
+            let closest = null;
+            let minDistance = Infinity;
+            
+            for (const node of nodes) {
+                const dx = x - node.x;
+                const dy = y - node.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < 25 && distance < minDistance) { 
+                    minDistance = distance;
+                    closest = node;
+                }
+            }
+            return closest;
+        }
+
+        function handleMouseMove(e) {
+            const subject = getSubject(e);
+            if (subject !== hoveredNode) {
+                hoveredNode = subject;
+                draw(); 
+                canvas.style.cursor = subject ? 'pointer' : 'grab';
+            }
+        }
+
+        function dragStarted(e) {
+            if (!e.active) simulation.alphaTarget(0.3).restart();
+            e.subject.fx = e.subject.x;
+            e.subject.fy = e.subject.y;
+        }
+
+        function dragged(e) {
+            e.subject.fx = e.x;
+            e.subject.fy = e.y;
+        }
+
+        function dragEnded(e) {
+            if (!e.active) simulation.alphaTarget(0.05);
+            e.subject.fx = null;
+            e.subject.fy = null;
+        }
+
+        function resizeCanvas() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.scale(dpr, dpr);
+            
+            canvas.style.width = `${width}px`;
+            canvas.style.height = `${height}px`;
+            
+            if(simulation) {
+                simulation.force("center", d3.forceCenter(width / 2, height / 2));
+                simulation.alpha(0.3).restart();
+                draw();
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        document.getElementById('csvUpload').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const text = event.target.result;
+                const graphData = processSurveyData(text);
+                
+                if (graphData) {
+                    loadData(graphData);
+                }
+                
+                e.target.value = ''; 
+            };
+            reader.readAsText(file);
+        });
+
+        document.getElementById('downloadTemplateBtn').addEventListener('click', () => {
+            const templateCSV = `Timestamp,Identify Yourself,"Relationship Mapping [Student A]","Relationship Mapping [Student B]","Relationship Mapping [Student C]"
+2026-05-11 12:00:00,Student A,,Close Friend,Friend
+2026-05-11 12:05:00,Student B,Close Friend,,Acquaintance
+2026-05-11 12:10:00,Student C,Avoid / Do not interact,Used to be friends,`;
+            
+            const blob = new Blob([templateCSV], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            
+            a.setAttribute('href', url);
+            a.setAttribute('download', 'Sociogram_Survey_Template.csv');
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        });
+
+        resizeCanvas();
+        renderFilters();
+        
+        const defaultCsvString = createMockDataset();
+        const initialData = processSurveyData(defaultCsvString);
+        if (initialData) {
+            loadData(initialData);
+        }
+
+    </script>
+</body>
+</html>
