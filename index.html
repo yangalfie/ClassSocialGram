@@ -29,10 +29,10 @@
     <div class="fixed top-4 left-4 right-4 sm:right-auto sm:w-[22rem] bg-slate-800/95 backdrop-blur rounded-xl border border-slate-700 ui-panel z-10 flex flex-col transition-all duration-300">
         
         <!-- Header -->
-        <div id="panelHeader" class="flex justify-between items-center p-4 cursor-pointer select-none rounded-t-xl hover:bg-slate-700/30 transition-colors">
+        <div id="panelHeader" class="flex justify-between items-center p-3 sm:p-4 cursor-pointer select-none rounded-t-xl hover:bg-slate-700/30 transition-colors">
             <div>
-                <h1 class="text-lg font-bold text-white mb-0.5 leading-none">Class Dynamics</h1>
-                <p class="text-[11px] text-slate-400 leading-none mt-1">Survey Data Sociogram</p>
+                <h1 class="text-base sm:text-lg font-bold text-white mb-0.5 leading-none">Class Dynamics</h1>
+                <p class="text-[10px] sm:text-[11px] text-slate-400 leading-none mt-1">Survey Data Sociogram</p>
             </div>
             <button id="toggleBtn" class="text-slate-400 hover:text-white bg-slate-700/50 p-1.5 rounded-lg transition-colors">
                 <svg id="chevronIcon" class="w-5 h-5 transform transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -42,64 +42,57 @@
         </div>
 
         <!-- Collapsible Content -->
-        <div id="panelContent" class="px-4 pb-4 flex flex-col gap-4 overflow-y-auto">
+        <div id="panelContent" class="px-3 sm:px-4 pb-4 flex flex-col gap-3 overflow-y-auto">
             
             <!-- Focus Student Multi-Select -->
-            <div class="border-t border-slate-700/50 pt-3">
-                <div class="flex justify-between items-center mb-2">
+            <div class="border-t border-slate-700/50 pt-2">
+                <div class="flex justify-between items-center mb-1.5">
                     <label class="block text-sm font-semibold text-slate-300">Focus Student(s)</label>
                     <div class="flex gap-2">
                         <button id="selectAllBtn" class="text-[10px] text-sky-400 hover:text-sky-300 transition-colors">Select All</button>
                         <button id="clearAllBtn" class="text-[10px] text-sky-400 hover:text-sky-300 transition-colors">Clear</button>
                     </div>
                 </div>
-                <div id="studentList" class="max-h-40 overflow-y-auto bg-slate-900/50 rounded-lg p-2 flex flex-col gap-1.5 border border-slate-700 shadow-inner">
+                <div id="studentList" class="max-h-60 overflow-y-auto bg-slate-900/50 rounded-lg p-2 flex flex-col gap-1.5 border border-slate-700 shadow-inner">
                     <!-- Checkboxes injected here via JS -->
                 </div>
             </div>
 
-            <div class="border-t border-slate-700/50 pt-3">
-                <h2 class="text-sm font-semibold mb-2 text-slate-300">View Options</h2>
-                <label class="flex items-center gap-3 cursor-pointer group hover:bg-slate-700/50 p-1.5 rounded transition-colors">
-                    <input type="checkbox" id="mutualToggle" class="w-4 h-4 accent-indigo-500 cursor-pointer">
-                    <span class="text-slate-300 group-hover:text-white transition-colors text-[13px]">Mutual Connections Only</span>
-                </label>
-                <p class="text-[10px] text-slate-400 px-2 leading-tight mt-1">Requires the other student to also reciprocate a positive/negative tie in the raw dataset.</p>
-            </div>
-
-            <!-- Analytics & Pairs -->
-            <div class="border-t border-slate-700/50 pt-3 flex flex-col gap-2">
-                <h2 class="text-sm font-semibold text-slate-300 mb-1">Analytics & Actions</h2>
-                
-                <button id="viewSummaryBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm py-2 px-3 rounded-lg transition-colors shadow-sm font-medium flex justify-center items-center gap-2">
-                    📊 View Class Insights
-                </button>
-
-                <button id="generatePairsBtn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-sm py-2 px-3 rounded-lg transition-colors shadow-sm font-medium flex justify-center items-center gap-2">
-                    🤝 Generate Student Pairs
-                </button>
-                <p class="text-[10px] text-slate-400 px-1 leading-tight text-center">Pairs avoid "Close Friends" to build new bonds.</p>
-            </div>
-
-            <div class="border-t border-slate-700/50 pt-3">
-                <h2 class="text-sm font-semibold mb-2 text-slate-300">Relationship Filters</h2>
-                <div id="filters" class="flex flex-col gap-2 text-sm">
+            <div class="border-t border-slate-700/50 pt-2">
+                <h2 class="text-sm font-semibold mb-1.5 text-slate-300">Relationship Filters</h2>
+                <div class="bg-slate-900/40 border border-slate-700/50 rounded p-1 mb-2">
+                    <label class="flex items-center gap-2 cursor-pointer group hover:bg-slate-700/50 p-1 rounded transition-colors">
+                        <input type="checkbox" id="mutualToggle" class="w-3.5 h-3.5 accent-indigo-500 cursor-pointer">
+                        <span class="text-slate-300 group-hover:text-white transition-colors text-[12px] font-medium">Require Mutual Tie</span>
+                    </label>
+                </div>
+                <div id="filters" class="flex flex-col gap-1 text-sm">
                     <!-- Checkboxes will be injected here via JS -->
                 </div>
             </div>
 
-            <div class="border-t border-slate-700/50 pt-3">
-                <label for="csvUpload" class="block w-full text-center font-medium cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white text-sm py-2 px-3 rounded-lg transition-colors shadow-sm">
-                    📁 Upload Survey CSV
-                </label>
-                <input type="file" id="csvUpload" accept=".csv" class="hidden" />
-                <div class="flex flex-col items-center mt-2 gap-1 text-center">
-                    <p class="text-[10px] text-slate-400 px-2 leading-tight">Must include "Identify Yourself" and "Relationship Mapping [...]" columns.</p>
+            <!-- Analytics & Pairs -->
+            <div class="border-t border-slate-700/50 pt-2 flex flex-col gap-2">
+                <h2 class="text-sm font-semibold text-slate-300 mb-0.5">Analytics & Actions</h2>
+                <div class="flex flex-row gap-2">
+                    <button id="viewSummaryBtn" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm py-2 px-2 rounded-lg transition-colors shadow-sm font-medium flex justify-center items-center gap-1.5">
+                        📊 Class Insights
+                    </button>
+                    <button id="generatePairsBtn" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm py-2 px-2 rounded-lg transition-colors shadow-sm font-medium flex justify-center items-center gap-1.5">
+                        🤝 Gen Pairs
+                    </button>
                 </div>
             </div>
 
-            <div class="text-[11px] text-slate-400 border-t border-slate-700/50 pt-3 leading-relaxed">
-                <p><strong>Pinch/Scroll</strong> to zoom. <strong>Drag</strong> background to pan. <strong>Drag</strong> nodes to move them.</p>
+            <div class="border-t border-slate-700/50 pt-3">
+                <label for="csvUpload" class="block w-full text-center font-medium cursor-pointer bg-slate-700 hover:bg-slate-600 border border-slate-600 text-white text-xs py-2 px-3 rounded-lg transition-colors shadow-sm">
+                    📁 Upload Survey CSV
+                </label>
+                <input type="file" id="csvUpload" accept=".csv" class="hidden" />
+            </div>
+
+            <div class="text-[10px] text-slate-400 text-center leading-relaxed">
+                <p><strong>Pinch/Scroll</strong> to zoom. <strong>Drag</strong> background to pan.</p>
             </div>
         </div>
     </div>
@@ -319,13 +312,13 @@
             
             allStudents.forEach(id => {
                 const label = document.createElement('label');
-                label.className = "flex items-center gap-2 cursor-pointer group hover:bg-slate-700/50 p-1 rounded transition-colors text-[12px] truncate";
+                label.className = "flex items-center gap-2 cursor-pointer group hover:bg-slate-700/50 p-1 rounded transition-colors text-[11px] truncate";
                 
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
                 checkbox.value = id;
                 checkbox.checked = true;
-                checkbox.className = "w-3.5 h-3.5 accent-indigo-500 cursor-pointer shrink-0";
+                checkbox.className = "w-3 h-3 accent-indigo-500 cursor-pointer shrink-0";
                 
                 checkbox.onchange = (e) => {
                     if(e.target.checked) activeStudents.add(id);
@@ -653,12 +646,12 @@
             
             Object.entries(relTypes).forEach(([type, style]) => {
                 const label = document.createElement('label');
-                label.className = "flex items-center gap-3 cursor-pointer group active:bg-slate-700/50 hover:bg-slate-700/50 p-1.5 rounded transition-colors";
+                label.className = "flex items-center gap-3 cursor-pointer group active:bg-slate-700/50 hover:bg-slate-700/50 p-1 rounded transition-colors";
                 
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
                 checkbox.checked = activeFilters.has(type);
-                checkbox.className = "w-4 h-4 accent-slate-500 cursor-pointer";
+                checkbox.className = "w-3.5 h-3.5 accent-slate-500 cursor-pointer";
                 checkbox.onchange = (e) => {
                     if(e.target.checked) activeFilters.add(type);
                     else activeFilters.delete(type);
@@ -666,12 +659,12 @@
                 };
 
                 const colorDot = document.createElement('span');
-                colorDot.className = "w-3.5 h-3.5 rounded-full inline-block shadow-sm shrink-0";
+                colorDot.className = "w-3 h-3 rounded-full inline-block shadow-sm shrink-0";
                 colorDot.style.backgroundColor = style.color;
 
                 const text = document.createElement('span');
                 text.textContent = type;
-                text.className = "text-slate-300 group-hover:text-white transition-colors text-[13px]";
+                text.className = "text-slate-300 group-hover:text-white transition-colors text-[12px]";
 
                 label.appendChild(checkbox);
                 label.appendChild(colorDot);
@@ -777,10 +770,10 @@
             const isMobile = window.innerWidth < 640;
 
             simulation = d3.forceSimulation(nodes)
-                .force("link", d3.forceLink(links).id(d => d.id).distance(isMobile ? 100 : 150))
-                .force("charge", d3.forceManyBody().strength(isMobile ? -300 : -500))
+                .force("link", d3.forceLink(links).id(d => d.id).distance(isMobile ? 120 : 180))
+                .force("charge", d3.forceManyBody().strength(isMobile ? -400 : -600))
                 .force("center", d3.forceCenter(width / 2, height / 2))
-                .force("collide", d3.forceCollide().radius(isMobile ? 30 : 40).iterations(2))
+                .force("collide", d3.forceCollide().radius(isMobile ? 35 : 50).iterations(2))
                 .alphaTarget(0.05); 
             
             simulation.on("tick", () => {
@@ -877,20 +870,32 @@
                 ctx.lineWidth = 2;
                 ctx.stroke();
 
-                ctx.fillStyle = isHovered ? '#fff' : '#94a3b8';
-                ctx.font = isHovered ? 'bold 15px Inter, sans-serif' : '13px Inter, sans-serif';
+                // Clean text rendering
+                ctx.fillStyle = isHovered ? '#ffffff' : '#e2e8f0';
+                ctx.font = isHovered ? 'bold 16px Inter, sans-serif' : '600 14px Inter, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'top';
                 
                 let displayName = node.id;
-                if (!isHovered && displayName.split(' ').length > 2) {
-                    displayName = displayName.split(' ').slice(0, 2).join(' ');
+                if (!isHovered) {
+                    // Show only first name to prevent wall of text
+                    displayName = displayName.split(' ')[0];
+                    if(displayName.length > 12) displayName = displayName.substring(0, 10) + '..';
                 }
 
-                const scaleFactor = Math.max(0.5, 1/transform.k);
+                // Smooth damped scale factor to keep text readable when zoomed far out
+                const scaleFactor = Math.max(0.4, Math.min(2, 1 / Math.pow(transform.k, 0.6)));
+                
                 ctx.save();
                 ctx.translate(node.x, node.y + (isHovered ? 18 : 14));
                 ctx.scale(scaleFactor, scaleFactor);
+
+                // Add dark halo outline for legibility over lines
+                ctx.lineJoin = 'round';
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = '#0f172a';
+                ctx.strokeText(displayName, 0, 0);
+                
                 ctx.fillText(displayName, 0, 0);
                 ctx.restore();
             });
